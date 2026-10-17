@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hokejski Generator Ekip</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            text-align: center;
+            color: #1a1a1a;
+        }
+        .settings {
+            margin-bottom: 20px;
+            background: #eef2f7;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .player-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .player-item label {
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        .btn:hover {
+            background-color: #218838;
+        }
+        .results-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .team-box {
+            flex: 1;
+            background: #fafafa;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 14px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .stats {
+            margin-top: 15px;
+            font-weight: bold;
+            text-align: center;
+        }
+        @media (max-width: 500px) {
+            .results-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏒 Hokejski Generator Ekip</h1>
+    
+    <div class="settings">
+        <label for="randomness">Stopnja naključnosti (mešanja): </label>
+        <input type="number" id="randomness" value="0.8" step="0.05" min="0" max="2" style="width: 60px;">
+    </div>
+
+    <h3>Označi prisotne igralce:</h3>
+    <div id="player-list"></div>
+
+    <button class="btn" onclick="generirajEkipe()">🎲 Generiraj ekipe</button>
+
+    <div id="output" style="display:none;">
+        <div class="results-container">
+            <div class="team-box">
+                <h3 id="title-a">Ekipa A</h3>
+                <table id="table-a">
+                    <thead><tr><th>Ime</th><th>Pozicija</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="team-box">
+                <h3 id="title-b">Ekipa B</h3>
+                <table id="table-b">
+                    <thead><tr><th>Ime</th><th>Pozicija</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="stats" id="stats-output"></div>
+    </div>
+</div>
+
+<script>
+    // Seznam tvojih igralcev (tuki jih lahko kasneje enostavno urejaš)
+    const vsiIgralci = [
+        { ime: "Miha Dečman", ocena: 8, pozicija: "D", prisoten: true },
+        { ime: "David Mlinar", ocena: 9, pozicija: "D", prisoten: true },
+        { ime: "Miha Logar", ocena: 8, pozicija: "F", prisoten: true },
+        { ime: "Jakob Bernard", ocena: 10, pozicija: "D", prisoten: true },
+        { ime: "Gašper Miklavčič", ocena: 7, "pozicija": "D", prisoten: true },
+        { ime: "Jan Ebner", ocena: 7, pozicija: "D", prisoten: true },
+        { ime: "Vasyl Kushnir", ocena: 6, pozicija: "F", prisoten: true },
+        { ime: "Jože Šemrov", ocena: 5, pozicija: "D", prisoten: true },
+        { ime: "Matic Smuk", ocena: 7, pozicija: "F", prisoten: true },
+        { ime: "Teo Golja", ocena: 7, pozicija: "F", prisoten: true },
+        { ime: "Gaj Neubauer", ocena: 3, pozicija: "F", prisoten: true },
+        { ime: "Blaž Bešvir", ocena: 7, pozicija: "D", prisoten: false },
+        { ime: "Aleš Drašler", ocena: 6, pozicija: "D", prisoten: true },
+        { ime: "Matej Drašler", ocena: 6, pozicija: "D", prisoten: true },
+        { ime: "Nejc Ravnik", ocena: 2, pozicija: "F", prisoten: false }
+    ];
+
+    // Nariši igralce ob nalaganju strani
+    function naloziSeznam() {
+        const listDiv = document.getElementById('player-list');
+        listDiv.innerHTML = '';
+        vsiIgralciforEach = vsiIgralci.forEach((igralec, index) => {
+            const div = document.createElement('div');
+            div.className = 'player-item';
+            div.innerHTML = `
+                <input type="checkbox" id="player-${index}" ${igralec.prisoten ? 'checked' : ''}>
+                <label for="player-${index}">${igralec.ime} (${igralec.pozicija}, ocena ${igralec.ocena})</label>
+            `;
+            listDiv.appendChild(div);
+        });
+    }
+
+    // Pomožna funkcija za mešanje seznama (Fisher-Yates / naključno)
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function generirajEkipe() {
+        const stopnjaNakljucnosti = parseFloat(document.getElementById('randomness').value) || 0.3;
+        
+        // Zberemo prisotne
+        let aktivniIgralci = [];
+        vsiIgralci.forEach((igralec, index) => {
+            const chk = document.getElementById(`player-${index}`);
+            if (chk && chk.checked) {
+                // Naredimo kopijo objekta
+                aktivniIgralci.push({ ...igralec });
+            }
+        });
+
+        if (aktivniIgralci.length < 4) {
+            alert("⚠️ Opozorilo: Premalo igralcev na treningu (vsaj 4).");
+            return;
+        }
+
+        // Ločimo branilce in napadalce
+        let branilci = aktivniIgralci.filter(i => i.pozicija.toUpperCase() === 'D');
+        let napadalci = aktivniIgralci.filter(i => i.pozicija.toUpperCase() === 'F');
+
+        function razdeliSkupino(skupina) {
+            shuffle(skupina);
+            skupina.forEach(i => {
+                let sum = (Math.random() * 2 - 1) * stopnjaNakljucnosti;
+                i.sort_ocena = i.ocena + sum;
+            });
+            skupina.sort((a, b) => b.sort_ocena - a.sort_ocena);
+
+            let e1 = [], e2 = [];
+            skupina.forEach((igralec, idx) => {
+                if (Math.floor(idx / 2) % 2 === 0) {
+                    if (idx % 2 === 0) e1.push(igralec);
+                    else e2.push(igralec);
+                } else {
+                    if (idx % 2 === 0) e2.push(igralec);
+                    else e1.push(igralec);
+                }
+            });
+            return [e1, e2];
+        }
+
+        let [b1, b2] = razdeliSkupino(branilci);
+        let [n1, n2] = razdeliSkupino(napadalci);
+
+        let ekipa1 = b1.concat(n1);
+        let ekipa2 = b2.concat(n2);
+
+        // Uravnavanje števila igralcev
+        while (ekipa1.length - ekipa2.length > 1) {
+            ekipa2.push(ekipa1.pop());
+        }
+        while (ekipa2.length - ekipa1.length > 1) {
+            ekipa1.push(ekipa2.pop());
+        }
+
+        // Izpis v tabele
+        document.getElementById('title-a').innerText = `Ekipa A (skupaj ${ekipa1.length})`;
+        document.getElementById('title-b').innerText = `Ekipa B (skupaj ${ekipa2.length})`;
+
+        let tbodyA = document.querySelector('#table-a tbody');
+        let tbodyB = document.querySelector('#table-b tbody');
+        tbodyA.innerHTML = '';
+        tbodyB.innerHTML = '';
+
+        ekipa1.forEach(i => {
+            tbodyA.innerHTML += `<tr><td>${i.ime}</td><td>${i.pozicija}</td></tr>`;
+        });
+        ekipa2.forEach(i => {
+            tbodyB.innerHTML += `<tr><td>${i.ime}</td><td>${i.pozicija}</td></tr>`;
+        });
+
+        // Povprečja
+        let sumA = ekipa1.reduce((acc, curr) => acc + curr.ocena, 0);
+        let povA = ekipa1.length > 0 ? (sumA / ekipa1.length).toFixed(2) : 0;
+
+        let sumB = ekipa2.reduce((acc, curr) => acc + curr.ocena, 0);
+        let povB = ekipa2.length > 0 ? (sumB / ekipa2.length).toFixed(2) : 0;
+
+        document.getElementById('stats-output').innerHTML = `
+            --- PRIMERJAVA MOČI ---<br>
+            Povprečna ocena Ekipa A: ${povA} | Povprečna ocena Ekipa B: ${povB}
+        `;
+
+        document.getElementById('output').style.display = 'block';
+    }
+
+    // Zaženi nalaganje ob odprtini strani
+    window.onload = naloziSeznam;
+</script>
+
+</body>
+</html>
